@@ -1,6 +1,37 @@
 require 'rubygems'
 require 'sinatra'
+require 'data_mapper'
 require './secure.rb'
+
+DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/todolist.db")
+
+class User
+	include DataMapper::Resource
+	property :id, Serial
+	property :username, String, :required => true, key: true, unique_index: true
+	property :userpass, String, :required => true
+#	property :password, String, length: 10..255
+	has n, :tasks
+end
+
+
+class Task
+	include DataMapper::Resource
+	property :id, Serial
+	property :name, Text, :required => true
+	property :status, Boolean, :required => true, :default => false
+	belongs_to :user
+	belongs_to :project
+end
+
+class Project
+	include DataMapper::Resource
+	property :id, Serial
+	property :name, Text, :required => true
+	has n, :tasks
+end
+
+DataMapper.finalize.auto_upgrade!
 
 configure do
   enable :sessions
@@ -39,42 +70,13 @@ end
 
 post '/login/attempt' do
   if user_exist?(params['username'])
-
-=begin
-  readfile = File.open "./users.txt", "r"
-
-  while (line=readfile.gets)
-	cred = line.split("=>")
-#	cred[0]==user_name && cred[1]==pass_word
-	if cred[0] == params['username']
-		@error = "/" << cred[0] << "/=/" << params['username'] << "/  /" << cred[1].chomp << "/=" << "/" << params['userpass'] << "/"
-		halt erb :login_form	
-	end
-  end
-
-=begin
-  while (line=readfile.gets)
-	cred = line.split("=>")
-	if cred[0]==user_name && cred[1]==pass_word
-		readfile.close
-		return true
-	else 
-		
-	end
-  end
-	readfile.close
-  return false
-=end	
-
-
-	if check_password?(params['username'], params['userpass'].strip)
+	if check_password?(params['username'], params['userpass'])
 	    session[:identity] = params['username']
 	else
-		@error = "Wrong password" << "*" << params['userpass'] << "*"
+		@error = "Wrong password" #<< "*" << params['userpass'] << "*"
 		halt erb :login_form	
 	end
   else
-#    erb 'Unknown username'
 	@error = "Unknown user"
 	halt erb :login_form	
   end
@@ -86,13 +88,10 @@ post '/sign_on' do
   if user_exist?(params['username'])
     session[:previous_url] = request.path
     @error = "Sorry,  username #{params['username']} already exist" 
-#+ request.path
     halt erb :sign_on
-#	erb :sign_on	
   elsif params['userpass']!=params['confirmpass']
     session[:previous_url] = request.path
     @error = "Sorry, password and confirmation is not match" 
-#+ request.path
     halt erb :sign_on
   else
     add_user(params['username'], params['userpass'].chomp)

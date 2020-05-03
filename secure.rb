@@ -1,31 +1,24 @@
 def user_exist?(user_name)
-  readfile = File.open "./users.txt", "r"
-  while (line=readfile.gets)
-	cred = line.split("=>")
-	if cred[0]==user_name
-		readfile.close
-		return true		
-	end
-  end
-  return false
+	User.first(:username => user_name)
 end
 
 def add_user(user_name, password)
-  users = File.open "./users.txt", "a"
-  users.puts "#{user_name}=>#{password}"
-  users.close
+
+  u = User.new
+  u.username = user_name
+  u.userpass = password
+	if u.save
+		 true
+	else
+		false
+	end
 end
 
 def check_password?(user_name, pass_word)
-  readfile = File.open "./users.txt", "r"
-  while (line=readfile.gets)
-	cred = line.split("=>")
-	if cred[0]==user_name && cred[1].chomp==pass_word
-		readfile.close
-		return true		
+	user = User.first(:username => user_name)
+	if user
+		return user.userpass == pass_word
 	end
-  end
-	readfile.close
-  return false
+	return false	
 end
 
